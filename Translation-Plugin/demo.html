@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小牛翻译示例</title>
+</head>
+
+<body>
+    <h1>欢迎来到我的网站</h1>
+    <p>这是一个示例页面，用于展示如何获取整个页面的文本并将其翻译为英文。</p>
+    <ul>
+        <li>项目一</li>
+        <li>项目二</li>
+        <li>项目三</li>
+    </ul>
+    <button onclick="translateText()">翻译整个页面</button>
+
+    <script>
+        // 获取所有文本节点，排除 <script> 和 <style> 内容
+        function getTextNodes(node) {
+            let allTextNodes = [];
+
+            function traverse(node) {
+                // 排除 <script> 和 <style> 标签
+                if (node.nodeType === Node.ELEMENT_NODE && (node.tagName === 'SCRIPT' || node.tagName === 'STYLE')) {
+                    return;
+                }
+
+                // 处理文本节点
+                if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() !== '') {
+                    allTextNodes.push(node);
+                } else {
+                    for (let child of node.childNodes) {
+                        traverse(child);
+                    }
+                }
+            }
+
+            traverse(node);
+            return allTextNodes;
+        }
+
+        // 将节点的文本组合成一个字符串，并通过小牛翻译 API 进行翻译
+        async function translateText() {
+            const textNodes = getTextNodes(document.body);
+            const originalTexts = textNodes.map(node => node.nodeValue.trim());
+
+            // 拼接所有文本以进行批量翻译
+            const allText = originalTexts.join('\n');
+            console.log(originalTexts, 8888)
+            // 使用小牛翻译 API
+            const apiKey = '6f77c3fb80cb7428248fc9d06524dbfb'; // 替换为你的 API 密钥
+            const url = 'http://api.niutrans.com/NiuTransServer/translationJson';
+            let fromData = JSON.stringify({
+                apikey: apiKey,
+                src_text: {
+                    "niutrans": originalTexts
+                }, // 发送拼接的文本
+                from: 'auto',
+                to: 'en'
+            })
+            // console.log(encodeURIComponent(fromData))
+            try {
+                // 发送请求获取翻译结果
+                let response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8;application/json",
+                    },
+                    body: fromData
+                });
+
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+
+                let data = await response.json();
+                // let data=dataJson.tgt_text.niutrans
+                console.log(data); // 查看返回的完整数据
+
+                // 处理翻译结果
+                if (data.tgt_text && data.tgt_text.niutrans) {
+                    let translatedTexts = data.tgt_text.niutrans.map(t => t);
+                    // console.log()
+                    // 将翻译结果填回对应的文本节点
+                    for (let i = 0; i < textNodes.length && i < translatedTexts.length; i++) {
+                        textNodes[i].nodeValue = translatedTexts[i];
+                    }
+
+                    console.log('翻译完成并已填回页面。');
+                } else {
+                    console.error('翻译结果格式不正确', data);
+                }
+            } catch (error) {
+                console.error('翻译失败:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>
